@@ -312,3 +312,78 @@ def test_should_leave_active_runs_to_the_start_guard(monkeypatch):
         SimulationRunner._processes.pop("sim-restart", None)
 
     assert process.poll() is None
+
+
+@pytest.mark.parametrize('first_platform', ['twitter', 'reddit'])
+def test_parallel_run_does_not_finish_before_second_platform_creates_its_log(monkeypatch, tmp_path, first_platform):
+    simulation_id = 'sim-late-platform'
+    _write_simulation_end(tmp_path, simulation_id, [first_platform])
+    state = SimulationRunState(
+        simulation_id=simulation_id,
+        runner_status=RunnerStatus.RUNNING,
+        twitter_completed=first_platform == 'twitter',
+        reddit_completed=first_platform == 'reddit',
+    )
+    state.platform = 'parallel'
+    synced = []
+    _patch_state_io(monkeypatch, tmp_path, state, synced)
+
+    SimulationRunner._complete_if_rounds_finished(simulation_id, state)
+
+    assert state.runner_status == RunnerStatus.RUNNING
+    assert state.completed_at is None
+    assert synced == []
+
+
+@pytest.mark.parametrize('platform', ['twitter', 'reddit', 'parallel'])
+def test_enabled_platform_survives_run_state_reload(monkeypatch, tmp_path, platform):
+    import json
+    simulation_id = 'sim-platform-persisted'
+    directory = tmp_path / simulation_id
+    directory.mkdir()
+    state = SimulationRunState(simulation_id=simulation_id, platform=platform)
+    (directory / 'run_state.json').write_text(json.dumps(state.to_dict()), encoding='utf-8')
+    monkeypatch.setattr(SimulationRunner, 'RUN_STATE_DIR', str(tmp_path))
+    assert SimulationRunner._load_run_state(simulation_id).platform == platform
+
+
+@pytest.mark.parametrize('platform', ['twitter', 'reddit'])
+def test_single_platform_completion_ignores_an_unselected_platform_log(monkeypatch, tmp_path, platform):
+    simulation_id = 'sim-single-platform'
+    _write_simulation_end(tmp_path, simulation_id, ['twitter', 'reddit'])
+    state = SimulationRunState(
+        simulation_id=simulation_id,
+        runner_status=RunnerStatus.RUNNING,
+        platform=platform,
+        twitter_completed=platform == 'twitter',
+        reddit_completed=platform == 'reddit',
+    )
+    synced = []
+    _patch_state_io(monkeypatch, tmp_path, state, synced)
+    SimulationRunner._complete_if_rounds_finished(simulation_id, state)
+    assert state.runner_status == RunnerStatus.COMPLETED
+    assert synced == [RunnerStatus.COMPLETED]
+
+
+def test_force_restart_closes_resident_process_before_log_cleanup(monkeypatch):
+    from types import SimpleNamespace
+    from flask import Flask
+    from app.api import simulation as api
+    from app.services.simulation_manager import SimulationStatus
+
+    events = []
+    simulation = SimpleNamespace(status=SimulationStatus.COMPLETED, graph_id='graph', project_id='project')
+    monkeypatch.setattr(api, 'SimulationManager', lambda: SimpleNamespace(
+        get_simulation=lambda simulation_id: simulation,
+        _save_simulation_state=lambda state: events.append('save'),
+    ))
+    monkeypatch.setattr(api, '_check_simulation_prepared', lambda simulation_id: (True, {}))
+    monkeypatch.setattr(SimulationRunner, 'get_run_state', lambda simulation_id: SimulationRunState(simulation_id=simulation_id, runner_status=RunnerStatus.COMPLETED))
+    monkeypatch.setattr(runner_module.ZepGraphMemoryManager, 'get_updater', lambda simulation_id: None)
+    monkeypatch.setattr(SimulationRunner, '_close_finished_interview_process', lambda simulation_id: events.append('close'))
+    monkeypatch.setattr(SimulationRunner, 'cleanup_simulation_logs', lambda simulation_id: (events.append('cleanup') or {'success': True}))
+    monkeypatch.setattr(SimulationRunner, 'start_simulation', lambda **kwargs: (events.append('start') or SimpleNamespace(to_dict=lambda: {})))
+    with Flask(__name__).test_request_context('/api/simulation/start', method='POST', json={'simulation_id': 'sim-force', 'force': True}):
+        response = api.start_simulation()
+    assert response.status_code == 200
+    assert events.index('close') < events.index('cleanup') < events.index('start')

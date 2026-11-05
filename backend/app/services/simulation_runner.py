@@ -151,6 +151,8 @@ class SimulationRunState:
     
     # 进程ID（用于停止）
     process_pid: Optional[int] = None
+    # Explicit for new runs; None retains file-based compatibility for old state.
+    platform: Optional[str] = None
     
     def add_action(self, action: AgentAction):
         """添加动作到最近动作列表"""
@@ -169,6 +171,7 @@ class SimulationRunState:
         return {
             "simulation_id": self.simulation_id,
             "runner_status": self.runner_status.value,
+            "platform": self.platform,
             "current_round": self.current_round,
             "total_rounds": self.total_rounds,
             "simulated_hours": self.simulated_hours,
@@ -311,6 +314,7 @@ class SimulationRunner:
             state = SimulationRunState(
                 simulation_id=simulation_id,
                 runner_status=RunnerStatus(data.get("runner_status", "idle")),
+                platform=data.get("platform"),
                 current_round=data.get("current_round", 0),
                 total_rounds=data.get("total_rounds", 0),
                 simulated_hours=data.get("simulated_hours", 0),
@@ -417,6 +421,7 @@ class SimulationRunner:
             runner_status=RunnerStatus.STARTING,
             total_rounds=total_rounds,
             total_simulation_hours=total_hours,
+            platform=platform if platform in {"twitter", "reddit"} else "parallel",
             started_at=datetime.now().isoformat(),
         )
 
@@ -971,6 +976,16 @@ class SimulationRunner:
         Returns:
             True 如果所有启用的平台都已完成
         """
+        # A parallel runner may complete one platform before the other has
+        # created its log. File existence alone must not publish early success.
+        if state.platform == "parallel":
+            return state.twitter_completed and state.reddit_completed
+        if state.platform == "twitter":
+            return state.twitter_completed
+        if state.platform == "reddit":
+            return state.reddit_completed
+
+        # Compatibility with persisted runs from before platform was recorded.
         sim_dir = os.path.join(cls.RUN_STATE_DIR, state.simulation_id)
         twitter_log = os.path.join(sim_dir, "twitter", "actions.jsonl")
         reddit_log = os.path.join(sim_dir, "reddit", "actions.jsonl")

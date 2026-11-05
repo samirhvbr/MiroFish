@@ -1654,6 +1654,9 @@ def start_simulation():
 
                 # 如果是强制模式，清理运行日志
                 if force:
+                    # Closing the old resident process requires its run state;
+                    # cleanup removes that state and its databases/logs.
+                    SimulationRunner._close_finished_interview_process(simulation_id)
                     logger.info(f"强制模式：清理模拟日志 {simulation_id}")
                     cleanup_result = SimulationRunner.cleanup_simulation_logs(simulation_id)
                     if not cleanup_result.get("success"):

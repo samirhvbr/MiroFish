@@ -569,8 +569,8 @@ const handleNewProject = async () => {
   const pending = getPendingUpload()
   
   if (!pending.isPending || (pending.files.length === 0 && !pending.sourceId)) {
-    error.value = '没有待上传的文件，请返回首页重新操作'
     loading.value = false
+    await router.replace({ name: 'Home', query: { notice: 'missing-source' } })
     return
   }
   

@@ -33,6 +33,7 @@
     "visitGithub": "Visit our Github page"
   },
   "home": {
+    "sourceCleared": "The pending source was cleared when the creation page was reloaded. Read your URL again or select your files to start a new project. Existing projects remain saved.",
     "tagline": "Concise & Universal Swarm Intelligence Engine",
     "version": "/ v0.1-Preview",
     "heroTitle1": "Upload Reports,",

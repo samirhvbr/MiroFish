@@ -33,6 +33,7 @@
     "visitGithub": "访问我们的Github主页"
   },
   "home": {
+    "sourceCleared": "创建页面重新加载后，待处理来源已清除。请重新读取 URL 或选择文件以开始新项目，已有项目仍保留。",
     "tagline": "简洁通用的群体智能引擎",
     "version": "/ v0.1-预览版",
     "heroTitle1": "上传任意报告",

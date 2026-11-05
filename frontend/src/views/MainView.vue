@@ -198,8 +198,8 @@ const initProject = async () => {
 const handleNewProject = async () => {
   const pending = getPendingUpload()
   if (!pending.isPending || (pending.files.length === 0 && !pending.sourceId)) {
-    error.value = 'No pending files found.'
-    addLog('Error: No pending files found for new project.')
+    loading.value = false
+    await router.replace({ name: 'Home', query: { notice: 'missing-source' } })
     return
   }
   

@@ -13,6 +13,7 @@
     </nav>
 
     <div class="main-content">
+      <p v-if="route.query.notice === 'missing-source'" role="status" class="source-notice">{{ $t('home.sourceCleared') }}</p>
       <!-- 上半部分：Hero 区域 -->
       <section class="hero-section">
         <div class="hero-left">
@@ -228,13 +229,14 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import HistoryDatabase from '../components/HistoryDatabase.vue'
 import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 import UrlSourceInput from '../components/UrlSourceInput.vue'
 import AISettings from '../components/AISettings.vue'
 
 const router = useRouter()
+const route = useRoute()
 
 // 表单数据
 const formData = ref({
@@ -344,6 +346,8 @@ const startSimulation = () => {
 </script>
 
 <style scoped>
+.source-notice { padding: 12px; background: #fff5e6; border: 1px solid #e7c995; border-radius: 4px; font-size: 14px; }
+
 .source-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
 .source-tabs button { padding: 8px 16px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 4px; }
 .source-tabs button[aria-pressed="true"] { border-color: #ff4500; color: #b33300; background: #fff6f2; }

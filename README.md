@@ -162,6 +162,8 @@ npm run backend   # Start backend only
 npm run frontend  # Start frontend only
 ```
 
+This fork also supports [starting from an article URL](docs/url-source.md): read a public article, generate a draft with your configured LLM, and edit the prompt before starting the engine.
+
 ### Option 2: Docker Deployment
 
 ```bash

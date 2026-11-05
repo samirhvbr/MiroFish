@@ -64,3 +64,12 @@ export function getProject(projectId) {
     method: 'get'
   })
 }
+
+// Preview and drafting are explicit actions; neither creates a project or graph.
+export function previewUrlSource(url) {
+  return service({ url: '/api/graph/source/preview', method: 'post', data: { url } })
+}
+
+export function draftUrlPrompt(sourceId, horizonHours) {
+  return service({ url: `/api/graph/source/${sourceId}/draft`, method: 'post', data: { horizon_hours: horizonHours } })
+}

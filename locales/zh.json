@@ -663,5 +663,37 @@
     "llmSelectAgentFailed": "LLM选择Agent失败，使用默认选择: {error}",
     "generateInterviewQuestionsFailed": "生成采访问题失败: {error}",
     "generateInterviewSummaryFailed": "生成采访摘要失败: {error}"
-  }
+  },
+  "urlSource": {
+    "sourceMode": "来源类型",
+    "filesMode": "上传文件",
+    "urlMode": "文章链接",
+    "urlLabel": "公开文章 URL",
+    "read": "读取文章",
+    "reading": "读取中…",
+    "scope": "支持单篇公开 HTTPS HTML 文章，不支持登录、付费墙或 JavaScript 渲染。预览有效期为 24 小时。",
+    "preview": "文章预览",
+    "resolvedUrl": "重定向至：",
+    "retrieved": "读取时间：",
+    "characters": "字符",
+    "extractedText": "查看提取的全文",
+    "horizon": "模拟时长（小时，1–720）",
+    "generate": "生成 / 替换提示词",
+    "drafting": "生成中…",
+    "reviewHint": "使用已配置的 LLM。请检查草稿并编辑下方模拟提示词，再启动模拟。重新生成将替换提示词。",
+    "summary": "AI 生成的来源摘要",
+    "assumptions": "AI 生成的假设 / 缺失信息",
+    "noAssumptions": "未列出假设，请在继续前核对原文。",
+    "invalidUrl": "请输入使用 443 端口、不含登录凭据的公开 HTTPS URL。",
+    "publicOnly": "仅支持公开互联网地址，已阻止私有和本地地址。",
+    "fetchFailed": "无法读取文章（不可用、拒绝访问或超时）。请检查 URL 后重试。",
+    "unsupported": "URL 必须返回未压缩的 HTML，其他格式请上传文件。",
+    "empty": "未找到可读的文章正文。不支持登录、付费墙或仅 JavaScript 渲染的页面。请更换 URL 或上传文件。",
+    "tooLarge": "文章过大：HTML 上限为 2 MiB，提取正文上限为 50,000 字符。请上传较短的文件。",
+    "redirects": "重定向次数过多或缺少目标地址。请尝试最终的公开 HTTPS URL。",
+    "expired": "文章预览已过期或不存在，请重新读取 URL。",
+    "invalidHorizon": "请选择 1 到 720 之间的整数小时。",
+    "draftFailed": "无法生成有效提示词。请检查 LLM 配置后重试，或自行编写提示词。文章预览仍可使用。",
+    "oneSource": "每个项目请选择文章 URL 或上传文件中的一种来源。"
+}
 }

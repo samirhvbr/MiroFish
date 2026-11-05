@@ -162,6 +162,8 @@ npm run backend   # 仅启动后端
 npm run frontend  # 仅启动前端
 ```
 
+此分支还支持[从文章 URL 开始](docs/url-source.md)：读取公开文章，使用已配置的 LLM 生成草稿，并在启动引擎前编辑提示词。
+
 ### 二、Docker 部署
 
 ```bash

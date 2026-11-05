@@ -4,15 +4,18 @@
 """
 
 import os
+import io
 import re
 import traceback
 import threading
 from contextlib import ExitStack, nullcontext
 from flask import request, jsonify
+from werkzeug.datastructures import FileStorage
 from zep_cloud import NotFoundError
 
 from . import graph_bp
 from ..config import Config
+from ..services.url_source import SourceError, SourceStore, validate_horizon
 from ..services.ontology_generator import OntologyGenerator
 from ..services.graph_builder import BatchSubmission, GraphBuilderService
 from ..services.text_processor import TextProcessor
@@ -310,7 +313,18 @@ def generate_ontology():
         
         # 获取上传的文件
         uploaded_files = request.files.getlist('files')
-        if not uploaded_files or all(not f.filename for f in uploaded_files):
+        source_id = request.form.get('source_id')
+        source = None
+        horizon = None
+        if source_id:
+            try:
+                source = SourceStore.get(source_id)
+                horizon = validate_horizon(request.form.get('simulation_horizon_hours', '72'))
+            except SourceError as error:
+                return jsonify(success=False, error=t(f'urlSource.{error.code}')), 400
+            if any(f.filename for f in uploaded_files):
+                return jsonify(success=False, error=t('urlSource.oneSource')), 400
+        if source is None and (not uploaded_files or all(not f.filename for f in uploaded_files)):
             return jsonify({
                 "success": False,
                 "error": t('api.requireFileUpload')
@@ -324,7 +338,22 @@ def generate_ontology():
         # 保存文件并提取文本
         document_texts = []
         all_text = ""
-        
+        if source is not None:
+            # Use the reviewed snapshot, never refetch a potentially changed page.
+            file_info = ProjectManager.save_file_to_project(
+                project.project_id,
+                FileStorage(stream=io.BytesIO(source['text'].encode('utf-8'))),
+                'url-article.txt',
+            )
+            project.files.append({'filename': 'url-article.txt', 'size': file_info['size']})
+            project.sources = [{
+                **{key: source[key] for key in ('url', 'resolved_url', 'title', 'retrieved_at', 'sha256')},
+                'text_file': f"files/{file_info['saved_filename']}",
+            }]
+            project.simulation_horizon_hours = horizon
+            document_texts.append(source['text'])
+            all_text = source['text']
+
         for file in uploaded_files:
             if file and file.filename and allowed_file(file.filename):
                 # 保存文件到项目目录
@@ -387,6 +416,8 @@ def generate_ontology():
                 "ontology": project.ontology,
                 "analysis_summary": project.analysis_summary,
                 "files": project.files,
+                "sources": project.sources,
+                "simulation_horizon_hours": project.simulation_horizon_hours,
                 "total_text_length": project.total_text_length
             }
         })

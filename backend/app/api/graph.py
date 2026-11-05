@@ -30,6 +30,7 @@ from ..services.simulation_manager import SimulationManager
 from ..services.simulation_runner import SimulationRunner, RunnerStatus
 from ..services.zep_graph_memory_updater import ZepGraphMemoryManager
 from ..utils.llm_client import LLMResponseError
+from ..services.ai_settings import misplaced_zep_key
 
 # 获取日志器
 logger = get_logger('mirofish.api')
@@ -318,6 +319,9 @@ def generate_ontology():
                 "error": t('api.requireSimulationRequirement')
             }), 400
         
+        if misplaced_zep_key(Config.ZEP_API_KEY, Config.LLM_API_KEY):
+            return jsonify(success=False, error=t('aiSettings.distinctZepKey')), 400
+
         # 获取上传的文件
         uploaded_files = request.files.getlist('files')
         source_id = request.form.get('source_id')

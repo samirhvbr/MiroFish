@@ -252,6 +252,7 @@ class SimulationConfigGenerator:
         enable_twitter: bool = True,
         enable_reddit: bool = True,
         progress_callback: Optional[Callable[[int, int, str], None]] = None,
+        simulation_horizon_hours: Optional[int] = None,
     ) -> SimulationParameters:
         """
         智能生成完整的模拟配置（分步生成）
@@ -291,6 +292,9 @@ class SimulationConfigGenerator:
             entities=entities
         )
         
+        if simulation_horizon_hours is not None:
+            context += f"\nUser-selected simulation horizon: {simulation_horizon_hours} hours."
+
         reasoning_parts = []
         
         # ========== 步骤1: 生成时间配置 ==========
@@ -298,6 +302,8 @@ class SimulationConfigGenerator:
         num_entities = len(entities)
         time_config_result = self._generate_time_config(context, num_entities)
         time_config = self._parse_time_config(time_config_result, num_entities)
+        if simulation_horizon_hours is not None:
+            time_config.total_simulation_hours = simulation_horizon_hours
         reasoning_parts.append(f"{t('progress.timeConfigLabel')}: {time_config_result.get('reasoning', t('common.success'))}")
         
         # ========== 步骤2: 生成事件配置 ==========

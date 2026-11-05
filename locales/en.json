@@ -663,5 +663,37 @@
     "llmSelectAgentFailed": "LLM agent selection failed, using default selection: {error}",
     "generateInterviewQuestionsFailed": "Failed to generate interview questions: {error}",
     "generateInterviewSummaryFailed": "Failed to generate interview summary: {error}"
-  }
+  },
+  "urlSource": {
+    "sourceMode": "Source type",
+    "filesMode": "Upload files",
+    "urlMode": "Article URL",
+    "urlLabel": "Public article URL",
+    "read": "Read article",
+    "reading": "Reading…",
+    "scope": "One public HTTPS HTML article. No sign-in, paywall or JavaScript rendering. Previews expire after 24 hours.",
+    "preview": "Article preview",
+    "resolvedUrl": "Redirected to:",
+    "retrieved": "Retrieved:",
+    "characters": "characters",
+    "extractedText": "Inspect extracted text",
+    "horizon": "Simulation horizon (hours, 1–720)",
+    "generate": "Generate / replace prompt",
+    "drafting": "Drafting…",
+    "reviewHint": "Uses your configured LLM. Review the draft below and edit the simulation prompt before starting. Regenerating replaces your prompt.",
+    "summary": "AI-generated source summary",
+    "assumptions": "AI-generated assumptions / missing context",
+    "noAssumptions": "No assumptions listed. Check the source before continuing.",
+    "invalidUrl": "Enter a valid public HTTPS URL using port 443, without credentials.",
+    "publicOnly": "Only public internet destinations are supported. Private and local addresses are blocked.",
+    "fetchFailed": "Could not read the article (unavailable, access denied or timed out). Check the URL and try again.",
+    "unsupported": "This URL must return HTML without compression. Upload a document for other formats.",
+    "empty": "No readable article text found. Sign-in, paywalls and JavaScript-only pages are not supported. Try another URL or upload a document.",
+    "tooLarge": "Article too large: maximum 2 MiB HTML and 50,000 extracted characters. Upload a shorter document instead.",
+    "redirects": "Too many redirects or a redirect without a destination. Try the final public HTTPS URL.",
+    "expired": "Article preview expired or was not found. Read the URL again before continuing.",
+    "invalidHorizon": "Choose a whole number of hours from 1 to 720.",
+    "draftFailed": "Could not generate a usable prompt. Check your LLM configuration and try again, or write your own prompt. The article preview is still available.",
+    "oneSource": "Choose either an article URL or uploaded files for this project."
+}
 }

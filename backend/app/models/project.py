@@ -34,6 +34,8 @@ class Project:
     
     # 文件信息
     files: List[Dict[str, str]] = field(default_factory=list)  # [{filename, path, size}]
+    sources: List[Dict[str, Any]] = field(default_factory=list)
+    simulation_horizon_hours: Optional[int] = None
     total_text_length: int = 0
     
     # 本体信息（接口1生成后填充）
@@ -63,6 +65,8 @@ class Project:
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "files": self.files,
+            "sources": self.sources,
+            "simulation_horizon_hours": self.simulation_horizon_hours,
             "total_text_length": self.total_text_length,
             "ontology": self.ontology,
             "analysis_summary": self.analysis_summary,
@@ -90,6 +94,8 @@ class Project:
             created_at=data.get('created_at', ''),
             updated_at=data.get('updated_at', ''),
             files=data.get('files', []),
+            sources=data.get('sources', []),
+            simulation_horizon_hours=data.get('simulation_horizon_hours'),
             total_text_length=data.get('total_text_length', 0),
             ontology=data.get('ontology'),
             analysis_summary=data.get('analysis_summary'),

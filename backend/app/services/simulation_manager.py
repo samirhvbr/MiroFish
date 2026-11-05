@@ -13,6 +13,7 @@ from datetime import datetime
 from enum import Enum
 
 from ..config import Config
+from ..models.project import ProjectManager
 from ..utils.logger import get_logger
 from .zep_entity_reader import ZepEntityReader, FilteredEntities
 from .oasis_profile_generator import OasisProfileGenerator, OasisAgentProfile
@@ -420,6 +421,7 @@ class SimulationManager:
                     total=3
                 )
             
+            project = ProjectManager.get_project(state.project_id)
             sim_params = config_generator.generate_config(
                 simulation_id=simulation_id,
                 project_id=state.project_id,
@@ -428,7 +430,8 @@ class SimulationManager:
                 document_text=document_text,
                 entities=filtered.entities,
                 enable_twitter=state.enable_twitter,
-                enable_reddit=state.enable_reddit
+                enable_reddit=state.enable_reddit,
+                simulation_horizon_hours=project.simulation_horizon_hours if project else None,
             )
             
             if progress_callback:

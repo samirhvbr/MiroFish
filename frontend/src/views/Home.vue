@@ -133,7 +133,20 @@
                 <span class="console-meta">{{ $t('home.supportedFormats') }}</span>
               </div>
               
-              <div 
+              <div class="source-tabs" role="group" :aria-label="$t('urlSource.sourceMode')">
+                <button type="button" :aria-pressed="sourceMode === 'files'" @click="sourceMode = 'files'">{{ $t('urlSource.filesMode') }}</button>
+                <button type="button" :aria-pressed="sourceMode === 'url'" @click="sourceMode = 'url'">{{ $t('urlSource.urlMode') }}</button>
+              </div>
+              <UrlSourceInput
+                v-show="sourceMode === 'url'"
+                v-model:horizon="horizonHours"
+                :disabled="loading"
+                @update:source="setUrlSource"
+                @draft="formData.simulationRequirement = $event"
+                @busy="urlBusy = $event"
+              />
+              <div
+                v-show="sourceMode === 'files'"
                 class="upload-zone"
                 :class="{ 'drag-over': isDragOver, 'has-files': files.length > 0 }"
                 @dragover.prevent="handleDragOver"
@@ -183,7 +196,8 @@
                   class="code-input"
                   :placeholder="$t('home.promptPlaceholder')"
                   rows="6"
-                  :disabled="loading"
+                  :disabled="loading || urlBusy"
+                  :aria-label="$t('home.simulationPrompt')"
                 ></textarea>
                 <div class="model-badge">{{ $t('home.engineBadge') }}</div>
               </div>
@@ -216,6 +230,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import HistoryDatabase from '../components/HistoryDatabase.vue'
 import LanguageSwitcher from '../components/LanguageSwitcher.vue'
+import UrlSourceInput from '../components/UrlSourceInput.vue'
 
 const router = useRouter()
 
@@ -226,6 +241,14 @@ const formData = ref({
 
 // 文件列表
 const files = ref([])
+const sourceMode = ref('files')
+const urlSource = ref(null)
+const horizonHours = ref(72)
+const urlBusy = ref(false)
+const setUrlSource = (source) => {
+  urlSource.value = source
+  if (!source) formData.value.simulationRequirement = ''
+}
 
 // 状态
 const loading = ref(false)
@@ -237,7 +260,10 @@ const fileInput = ref(null)
 
 // 计算属性:是否可以提交
 const canSubmit = computed(() => {
-  return formData.value.simulationRequirement.trim() !== '' && files.value.length > 0
+  const hasSource = sourceMode.value === 'url'
+    ? urlSource.value?.source_id && Number.isInteger(horizonHours.value) && horizonHours.value >= 1 && horizonHours.value <= 720
+    : files.value.length > 0
+  return formData.value.simulationRequirement.trim() !== '' && hasSource && !urlBusy.value
 })
 
 // 触发文件选择
@@ -300,7 +326,11 @@ const startSimulation = () => {
   
   // 存储待上传的数据
   import('../store/pendingUpload.js').then(({ setPendingUpload }) => {
-    setPendingUpload(files.value, formData.value.simulationRequirement)
+    setPendingUpload(
+      sourceMode.value === 'files' ? files.value : [],
+      formData.value.simulationRequirement,
+      sourceMode.value === 'url' ? { sourceId: urlSource.value.source_id, horizonHours: horizonHours.value } : {}
+    )
     
     // 立即跳转到Process页面（使用特殊标识表示新建项目）
     router.push({
@@ -312,6 +342,10 @@ const startSimulation = () => {
 </script>
 
 <style scoped>
+.source-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.source-tabs button { padding: 8px 16px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 4px; }
+.source-tabs button[aria-pressed="true"] { border-color: #ff4500; color: #b33300; background: #fff6f2; }
+
 /* 全局变量与重置 */
 :root {
   --black: #000000;

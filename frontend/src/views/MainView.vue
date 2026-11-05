@@ -84,7 +84,7 @@ import GraphPanel from '../components/GraphPanel.vue'
 import Step1GraphBuild from '../components/Step1GraphBuild.vue'
 import Step2EnvSetup from '../components/Step2EnvSetup.vue'
 import { generateOntology, getProject, buildGraph, getTaskStatus, getGraphData } from '../api/graph'
-import { getPendingUpload, clearPendingUpload } from '../store/pendingUpload'
+import { getPendingUpload, pendingUploadFormData, clearPendingUpload } from '../store/pendingUpload'
 import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 
 const route = useRoute()
@@ -193,7 +193,7 @@ const initProject = async () => {
 
 const handleNewProject = async () => {
   const pending = getPendingUpload()
-  if (!pending.isPending || pending.files.length === 0) {
+  if (!pending.isPending || (pending.files.length === 0 && !pending.sourceId)) {
     error.value = 'No pending files found.'
     addLog('Error: No pending files found for new project.')
     return
@@ -205,9 +205,7 @@ const handleNewProject = async () => {
     ontologyProgress.value = { message: 'Uploading and analyzing docs...' }
     addLog('Starting ontology generation: Uploading files...')
     
-    const formData = new FormData()
-    pending.files.forEach(f => formData.append('files', f))
-    formData.append('simulation_requirement', pending.simulationRequirement)
+    const formData = pendingUploadFormData(pending)
     
     const res = await generateOntology(formData)
     if (res.success) {

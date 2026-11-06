@@ -591,7 +591,10 @@
     "getReportInfoFailed": "Não foi possível obter as informações do relatório: {error}",
     "enterStep": "Abrindo a etapa {step}: {name}",
     "returnToStep": "Voltando à etapa {step}: {name}",
-    "customSimRounds": "Simulação personalizada: {rounds} rodadas"
+    "customSimRounds": "Simulação personalizada: {rounds} rodadas",
+    "resumeCheckFailed": "Não foi possível verificar a execução salva: {error}. Nenhuma nova simulação foi iniciada.",
+    "resumedRunningSim": "Retomando o acompanhamento da simulação existente na rodada {round}, sem reiniciá-la.",
+    "loadedExistingSim": "Simulação existente carregada com {actions} ações salvas."
   },
   "report": {
     "taskStarted": "Tarefa de geração do relatório iniciada",

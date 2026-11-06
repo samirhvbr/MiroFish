@@ -122,10 +122,11 @@ const statusClass = computed(() => {
 const statusText = computed(() => {
   if (currentStatus.value === 'error') return t('common.error')
   if (currentStatus.value === 'completed') return t('common.completed')
+  if (currentStatus.value === 'finalizing') return t('step3.finalizingMemoryShort')
   return t('common.running')
 })
 
-const isSimulating = computed(() => currentStatus.value === 'processing')
+const isSimulating = computed(() => ['processing', 'finalizing'].includes(currentStatus.value))
 
 // --- Helpers ---
 const addLog = (msg) => {

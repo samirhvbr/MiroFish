@@ -214,7 +214,10 @@
     "forceStopSuccess": "模拟已强制停止",
     "forceStopFailed": "强制停止失败: {error}",
     "startGenerateReportBtn": "开始生成结果报告",
-    "generatingReportBtn": "启动中..."
+    "generatingReportBtn": "启动中...",
+    "finalizingMemory": "正在完成 Zep 记忆写入。同步成功后才能生成报告。",
+    "finalizingMemoryShort": "正在完成记忆写入",
+    "failedRunHint": "模拟或其收尾过程失败，暂时无法生成报告。已保存的结果仍然保留；请勿通过重新运行模拟来重试收尾。"
   },
   "step4": {
     "generatingSection": "正在生成{title}...",

@@ -103,6 +103,14 @@
       </div>
     </div>
 
+    <div v-if="runStatus.runner_status === 'stopping'" class="run-notice" role="status">
+      {{ $t('step3.finalizingMemory') }}
+    </div>
+    <div v-else-if="runStatus.runner_status === 'failed'" class="run-notice failed" role="alert">
+      {{ $t('step3.failedRunHint') }}
+      <div v-if="runStatus.error">{{ runStatus.error }}</div>
+    </div>
+
     <!-- Main Content: Dual Timeline -->
     <div class="main-content-area" ref="scrollContainer">
       <!-- Timeline Header -->
@@ -445,8 +453,8 @@ const doStartSimulation = async () => {
 // 判断后端是否已存在不可再生的运行数据
 // run_state 缺失时后端返回 runner_status='idle'，此时才认为是全新的模拟
 const hasRecoverableRun = (status) => {
-  if (!status) return false
-  if (status.runner_status && status.runner_status !== 'idle') return true
+  // Only the explicit idle response proves that no previous run exists.
+  if (!status || status.runner_status !== 'idle') return true
   return (status.total_actions_count || 0) > 0
 }
 
@@ -488,7 +496,7 @@ const resumeOrStartSimulation = async () => {
   if (isLive) {
     phase.value = 1
     addLog(t('log.resumedRunningSim', { round: status.current_round || 0 }))
-    emit('update-status', 'processing')
+    emit('update-status', status.runner_status === 'stopping' ? 'finalizing' : 'processing')
     startStatusPolling()
     startDetailPolling()
   } else {
@@ -589,6 +597,8 @@ const fetchRunStatus = async () => {
         phase.value = 2
         stopPolling()
         emit('update-status', 'completed')
+      } else if (data.runner_status === 'stopping') {
+        emit('update-status', 'finalizing')
       }
     }
   } catch (err) {
@@ -767,6 +777,21 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.run-notice {
+  padding: 12px 24px;
+  background: #fff8e8;
+  border-bottom: 1px solid #ead9ae;
+  color: #665019;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.run-notice.failed {
+  background: #fff1f0;
+  color: #a32b24;
+  border-color: #f0c6c2;
+}
+
 .simulation-panel {
   height: 100%;
   display: flex;

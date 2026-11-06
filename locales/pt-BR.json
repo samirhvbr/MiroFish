@@ -214,7 +214,10 @@
     "forceStopSuccess": "Processo da simulação interrompido à força",
     "forceStopFailed": "Não foi possível forçar a interrupção: {error}",
     "startGenerateReportBtn": "Gerar relatório",
-    "generatingReportBtn": "Iniciando..."
+    "generatingReportBtn": "Iniciando...",
+    "finalizingMemory": "Finalizando as memórias salvas no Zep. O relatório ficará disponível após a sincronização ser concluída com sucesso.",
+    "finalizingMemoryShort": "Finalizando memórias",
+    "failedRunHint": "A simulação ou sua finalização falhou. O relatório está indisponível. Os resultados salvos foram preservados; não reinicie a simulação para tentar finalizar as memórias novamente."
   },
   "step4": {
     "generatingSection": "Gerando {title}...",

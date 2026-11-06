@@ -214,7 +214,10 @@
     "forceStopSuccess": "Simulation force stopped",
     "forceStopFailed": "Force stop failed: {error}",
     "startGenerateReportBtn": "Generate Report",
-    "generatingReportBtn": "Starting..."
+    "generatingReportBtn": "Starting...",
+    "finalizingMemory": "Finalizing saved memories in Zep. Report generation will be available after synchronization succeeds.",
+    "finalizingMemoryShort": "Finalizing memories",
+    "failedRunHint": "The simulation or its finalization failed. Report generation is unavailable. Saved results have been kept; do not restart the simulation to retry finalization."
   },
   "step4": {
     "generatingSection": "Generating {title}...",

@@ -95,6 +95,9 @@
                 </div>
                 <div class="profile-meta">
                   <span class="profile-profession">{{ profile.profession || $t('step2.unknownProfession') }}</span>
+                  <span v-if="scenarioProfileIds.has(String(profile.user_id))" class="scenario-profile-badge">
+                    {{ $t('participants.synthetic') }}
+                  </span>
                 </div>
                 <p class="profile-bio">{{ profile.bio || $t('step2.noBio') }}</p>
                 <div v-if="profile.interested_topics?.length" class="profile-topics">
@@ -663,6 +666,11 @@ const profiles = ref([])
 const entityTypes = ref([])
 const expectedTotal = ref(null)
 const simulationConfig = ref(null)
+const scenarioProfileIds = computed(() => new Set(
+  (simulationConfig.value?.agent_configs || [])
+    .filter(agent => agent.entity_type === 'ScenarioParticipant')
+    .map(agent => String(agent.agent_id))
+))
 const selectedProfile = ref(null)
 const showProfilesDetail = ref(true)
 
@@ -1398,6 +1406,16 @@ onUnmounted(() => {
 
 .profile-meta {
   margin-bottom: 8px;
+}
+
+.scenario-profile-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: #f2e9ff;
+  color: #533287;
+  font-size: 0.69rem;
 }
 
 .profile-profession {

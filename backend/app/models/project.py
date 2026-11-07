@@ -55,6 +55,7 @@ class Project:
     
     # 错误信息
     error: Optional[str] = None
+    scenario_participants: List[str] = field(default_factory=list)
     
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
@@ -67,6 +68,7 @@ class Project:
             "files": self.files,
             "sources": self.sources,
             "simulation_horizon_hours": self.simulation_horizon_hours,
+            "scenario_participants": self.scenario_participants,
             "total_text_length": self.total_text_length,
             "ontology": self.ontology,
             "analysis_summary": self.analysis_summary,
@@ -96,6 +98,7 @@ class Project:
             files=data.get('files', []),
             sources=data.get('sources', []),
             simulation_horizon_hours=data.get('simulation_horizon_hours'),
+            scenario_participants=data.get('scenario_participants') or [],
             total_text_length=data.get('total_text_length', 0),
             ontology=data.get('ontology'),
             analysis_summary=data.get('analysis_summary'),

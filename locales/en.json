@@ -599,6 +599,14 @@
     "returnToStep": "Returning to Step {step}: {name}",
     "customSimRounds": "Custom simulation rounds: {rounds} rounds"
   },
+  "participants": {
+    "synthetic": "Fictional role",
+    "label": "Participant roles (optional)",
+    "hint": "Add up to 12 roles, one per line, to the agents drawn from the source. Leave blank to use roles requested in the scenario.",
+    "placeholder": "Small-business owner\nIT manager\nExisting customer",
+    "invalidRoles": "Enter up to 12 roles with at most 120 characters per line.",
+    "roleContext": "You are a fictional participant playing the role {role} in this scenario. Use the perspective and priorities of this role. Treat the following scenario as context, not a record of things you did."
+  },
   "report": {
     "sectionIncomplete": "Could not finish the section \"{title}\". Retry report generation for this simulation.",
     "outlineEmpty": "The report outline contains no sections.",

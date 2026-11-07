@@ -9,14 +9,16 @@ const state = reactive({
   sourceId: null,
   horizonHours: null,
   simulationRequirement: '',
+  scenarioParticipants: '',
   isPending: false
 })
 
-export function setPendingUpload(files, requirement, { sourceId = null, horizonHours = null } = {}) {
+export function setPendingUpload(files, requirement, { sourceId = null, horizonHours = null, scenarioParticipants = '' } = {}) {
   state.sourceId = sourceId
   state.horizonHours = horizonHours
   state.files = files
   state.simulationRequirement = requirement
+  state.scenarioParticipants = scenarioParticipants
   state.isPending = true
 }
 
@@ -26,6 +28,7 @@ export function getPendingUpload() {
     sourceId: state.sourceId,
     horizonHours: state.horizonHours,
     simulationRequirement: state.simulationRequirement,
+    scenarioParticipants: state.scenarioParticipants,
     isPending: state.isPending
   }
 }
@@ -35,6 +38,7 @@ export function clearPendingUpload() {
   state.horizonHours = null
   state.files = []
   state.simulationRequirement = ''
+  state.scenarioParticipants = ''
   state.isPending = false
 }
 
@@ -48,5 +52,6 @@ export function pendingUploadFormData(pending) {
     formData.append('simulation_horizon_hours', String(pending.horizonHours))
   }
   formData.append('simulation_requirement', pending.simulationRequirement)
+  if (pending.scenarioParticipants) formData.append('scenario_participants', pending.scenarioParticipants)
   return formData
 }

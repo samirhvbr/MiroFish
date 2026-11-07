@@ -27,6 +27,7 @@ from ..utils.zep import (
     normalize_zep_search_query,
 )
 from .zep_entity_reader import EntityNode, ZepEntityReader
+from .scenario_participants import SCENARIO_PARTICIPANT_TYPE
 
 logger = get_logger('mirofish.oasis_profile')
 
@@ -295,7 +296,8 @@ class OasisProfileGenerator:
         user_name = self._generate_username(name)
         
         # 构建上下文信息
-        context = self._build_entity_context(entity)
+        scenario_participant = entity_type == SCENARIO_PARTICIPANT_TYPE
+        context = "" if scenario_participant else self._build_entity_context(entity)
         
         if use_llm:
             # 使用LLM生成详细人设
@@ -315,6 +317,13 @@ class OasisProfileGenerator:
                 entity_attributes=entity.attributes
             )
         
+        if scenario_participant:
+            details = _coerce_to_str(profile_data.get("persona"))
+            profile_data["persona"] = (
+                f"{entity.summary}\n\n{details}" if details and details != entity.summary else entity.summary
+            )
+            profile_data["profession"] = name
+
         return OasisAgentProfile(
             user_id=user_id,
             user_name=user_name,
@@ -331,7 +340,7 @@ class OasisProfileGenerator:
             country=profile_data.get("country"),
             profession=profile_data.get("profession"),
             interested_topics=profile_data.get("interested_topics", []),
-            source_entity_uuid=entity.uuid,
+            source_entity_uuid=None if scenario_participant else entity.uuid,
             source_entity_type=entity_type,
         )
     
@@ -564,6 +573,14 @@ class OasisProfileGenerator:
                 entity_name, entity_type, entity_summary, entity_attributes, context
             )
 
+        system_prompt = self._get_system_prompt(is_individual)
+        if entity_type == SCENARIO_PARTICIPANT_TYPE:
+            system_prompt += (
+                "\nThis is a fictional scenario role. Preserve its perspective and keep it distinct from "
+                "any organization in the source. Do not invent a verified identity, prior contacts, "
+                "purchases or incidents. Treat background assumptions as hypothetical."
+            )
+
         # 尝试多次生成，直到成功或达到最大重试次数
         max_attempts = 3
         last_error = None
@@ -574,7 +591,7 @@ class OasisProfileGenerator:
                     self.client,
                     model=self.model_name,
                     messages=[
-                        {"role": "system", "content": self._get_system_prompt(is_individual)},
+                        {"role": "system", "content": system_prompt},
                         {"role": "user", "content": prompt}
                     ],
                     response_format={"type": "json_object"},

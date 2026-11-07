@@ -599,6 +599,14 @@
     "returnToStep": "返回 Step {step}: {name}",
     "customSimRounds": "自定义模拟轮数: {rounds} 轮"
   },
+  "participants": {
+    "synthetic": "虚构角色",
+    "label": "参与者角色（可选）",
+    "hint": "每行填写一个角色，最多 12 个，补充来源中的智能体。留空时使用模拟需求中指定的角色。",
+    "placeholder": "小企业主\nIT 主管\n现有客户",
+    "invalidRoles": "最多填写 12 个角色，每行不超过 120 个字符。",
+    "roleContext": "你是此模拟中扮演「{role}」的虚构参与者。请从该角色的立场出发。以下场景是背景，不是你的真实行为记录。"
+  },
   "report": {
     "sectionIncomplete": "无法完成章节“{title}”。请为当前模拟重新生成报告。",
     "outlineEmpty": "报告大纲中没有章节。",

@@ -18,6 +18,7 @@ from . import graph_bp
 from ..config import Config
 from ..services.url_source import SourceError, SourceStore, validate_horizon
 from ..services.ontology_generator import OntologyGenerator
+from ..services.scenario_participants import normalize_participant_roles, parse_manual_participant_roles
 from ..services.graph_builder import BatchSubmission, GraphBuilderService
 from ..services.text_processor import TextProcessor
 from ..utils.file_parser import FileParser
@@ -319,6 +320,11 @@ def generate_ontology():
                 "error": t('api.requireSimulationRequirement')
             }), 400
         
+        try:
+            manual_roles = parse_manual_participant_roles(request.form.get("scenario_participants", ""))
+        except ValueError:
+            return jsonify(success=False, error=t("participants.invalidRoles")), 400
+
         if misplaced_zep_key(Config.ZEP_API_KEY, Config.LLM_API_KEY):
             return jsonify(success=False, error=t('aiSettings.distinctZepKey')), 400
 
@@ -415,6 +421,9 @@ def generate_ontology():
             "edge_types": ontology.get("edge_types", [])
         }
         project.analysis_summary = ontology.get("analysis_summary", "")
+        project.scenario_participants = manual_roles or normalize_participant_roles(
+            ontology.get("scenario_participants")
+        )
         project.status = ProjectStatus.ONTOLOGY_GENERATED
         ProjectManager.save_project(project)
         logger.info(f"=== 本体生成完成 === 项目ID: {project.project_id}")
@@ -429,6 +438,7 @@ def generate_ontology():
                 "files": project.files,
                 "sources": project.sources,
                 "simulation_horizon_hours": project.simulation_horizon_hours,
+                "scenario_participants": project.scenario_participants,
                 "total_text_length": project.total_text_length
             }
         })

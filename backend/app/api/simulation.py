@@ -11,6 +11,7 @@ from flask import request, jsonify, send_file
 from . import simulation_bp
 from ..config import Config
 from ..services.zep_entity_reader import ZepEntityReader
+from ..services.scenario_participants import include_scenario_participants
 from ..services.oasis_profile_generator import OasisProfileGenerator
 from ..services.simulation_manager import SimulationManager, SimulationStatus
 from ..services.simulation_runner import (
@@ -510,6 +511,12 @@ def prepare_simulation():
                 enrich_with_edges=False  # 不获取边信息，加快速度
             )
             # 保存实体数量到状态（供前端立即获取）
+            filtered_preview = include_scenario_participants(
+                filtered_preview,
+                project.scenario_participants,
+                simulation_requirement,
+                entity_types_list,
+            )
             state.entities_count = filtered_preview.filtered_count
             state.entity_types = list(filtered_preview.entity_types)
             logger.info(f"预期实体数量: {filtered_preview.filtered_count}, 类型: {filtered_preview.entity_types}")

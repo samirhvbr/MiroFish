@@ -205,6 +205,25 @@
               </div>
             </div>
 
+            <div class="console-section participant-roles">
+              <label class="console-label" for="participant-roles">{{ $t('participants.label') }}</label>
+              <p id="participant-roles-hint">{{ $t('participants.hint') }}</p>
+              <textarea
+                id="participant-roles"
+                v-model="scenarioParticipants"
+                class="code-input"
+                rows="3"
+                maxlength="1600"
+                :placeholder="$t('participants.placeholder')"
+                :disabled="loading || urlBusy"
+                :aria-invalid="invalidParticipantRoles"
+                aria-describedby="participant-roles-hint"
+              ></textarea>
+              <p v-if="invalidParticipantRoles" class="participant-roles-error" role="alert">
+                {{ $t('participants.invalidRoles') }}
+              </p>
+            </div>
+
             <!-- 启动按钮 -->
             <div class="console-section btn-section">
               <button 
@@ -249,6 +268,11 @@ const sourceMode = ref('files')
 const urlSource = ref(null)
 const horizonHours = ref(72)
 const urlBusy = ref(false)
+const scenarioParticipants = ref('')
+const invalidParticipantRoles = computed(() => {
+  const roles = scenarioParticipants.value.split(/\r?\n/).map(role => role.trim()).filter(Boolean)
+  return roles.length > 12 || roles.some(role => Array.from(role).length > 120)
+})
 const setUrlSource = (source) => {
   urlSource.value = source
   if (!source) formData.value.simulationRequirement = ''
@@ -267,7 +291,7 @@ const canSubmit = computed(() => {
   const hasSource = sourceMode.value === 'url'
     ? urlSource.value?.source_id && Number.isInteger(horizonHours.value) && horizonHours.value >= 1 && horizonHours.value <= 720
     : files.value.length > 0
-  return formData.value.simulationRequirement.trim() !== '' && hasSource && !urlBusy.value
+  return formData.value.simulationRequirement.trim() !== '' && hasSource && !urlBusy.value && !invalidParticipantRoles.value
 })
 
 // 触发文件选择
@@ -333,7 +357,10 @@ const startSimulation = () => {
     setPendingUpload(
       sourceMode.value === 'files' ? files.value : [],
       formData.value.simulationRequirement,
-      sourceMode.value === 'url' ? { sourceId: urlSource.value.source_id, horizonHours: horizonHours.value } : {}
+      {
+        ...(sourceMode.value === 'url' ? { sourceId: urlSource.value.source_id, horizonHours: horizonHours.value } : {}),
+        scenarioParticipants: scenarioParticipants.value.trim()
+      }
     )
     
     // 立即跳转到Process页面（使用特殊标识表示新建项目）
@@ -852,6 +879,30 @@ const startSimulation = () => {
   resize: vertical;
   outline: none;
   min-height: 150px;
+}
+
+.participant-roles p {
+  margin: 6px 0 8px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #555;
+}
+
+.participant-roles .code-input {
+  min-height: 100px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  background: #fafafa;
+  box-sizing: border-box;
+}
+
+.participant-roles .code-input:focus-visible {
+  outline: 2px solid var(--orange, #ff4500);
+  outline-offset: 2px;
+}
+
+.participant-roles .participant-roles-error {
+  color: #b42318;
 }
 
 .model-badge {

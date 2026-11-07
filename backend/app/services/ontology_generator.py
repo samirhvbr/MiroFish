@@ -226,6 +226,14 @@ class OntologyGenerator:
         
         lang_instruction = get_language_instruction()
         system_prompt = f"{ONTOLOGY_SYSTEM_PROMPT}\n\n{lang_instruction}\nIMPORTANT: Entity type names MUST be in English PascalCase (e.g., 'PersonEntity', 'MediaOrganization'). Relationship type names MUST be in English UPPER_SNAKE_CASE (e.g., 'WORKS_FOR'). Attribute names MUST be in English snake_case. Only description fields and analysis_summary should use the specified language above."
+        system_prompt += (
+            "\n\nInclude a separate JSON field \"scenario_participants\" with up to 12 short role labels. "
+            "Use only people or groups explicitly asked to act or react in the simulation requirement. "
+            "Keep each requested audience distinct even if the source documents never mention it. "
+            "The field describes fictional participants, separate from the factual ontology. "
+            "Do not derive roles from the documents or invent named individuals. "
+            "Use the requested language for generic role labels. Return [] if no participants are specified."
+        )
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message}

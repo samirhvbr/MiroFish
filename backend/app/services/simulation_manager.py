@@ -17,6 +17,7 @@ from ..models.project import ProjectManager
 from ..utils.logger import get_logger
 from .zep_entity_reader import ZepEntityReader, FilteredEntities
 from .oasis_profile_generator import OasisProfileGenerator, OasisAgentProfile
+from .scenario_participants import include_scenario_participants
 from .simulation_config_generator import SimulationConfigGenerator, SimulationParameters
 from ..utils.locale import t
 
@@ -303,6 +304,14 @@ class SimulationManager:
                 enrich_with_edges=True
             )
             
+            project = ProjectManager.get_project(state.project_id)
+            filtered = include_scenario_participants(
+                filtered,
+                project.scenario_participants if project else [],
+                simulation_requirement,
+                defined_entity_types,
+            )
+
             state.entities_count = filtered.filtered_count
             state.entity_types = list(filtered.entity_types)
             
@@ -421,7 +430,6 @@ class SimulationManager:
                     total=3
                 )
             
-            project = ProjectManager.get_project(state.project_id)
             sim_params = config_generator.generate_config(
                 simulation_id=simulation_id,
                 project_id=state.project_id,

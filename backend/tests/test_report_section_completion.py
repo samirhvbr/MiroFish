@@ -1,3 +1,4 @@
+import json
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -5,6 +6,8 @@ import pytest
 
 from app.config import Config
 from app.services.report_agent import ReportAgent, ReportManager, ReportOutline, ReportSection, ReportStatus
+from app.services.simulation_manager import SimulationManager
+from app.services.simulation_runner import SimulationRunner
 from app.utils.llm_client import LLMClient
 
 
@@ -24,7 +27,9 @@ def report_agent(tmp_path, monkeypatch):
     agent.plan_outline = Mock(
         return_value=ReportOutline("Test report", "Summary", [ReportSection("Findings")])
     )
-    agent._recorded_run_context = Mock(return_value="")
+    monkeypatch.setattr(SimulationRunner, "RUN_STATE_DIR", str(tmp_path / "simulations"))
+    monkeypatch.setattr(SimulationManager, "SIMULATION_DATA_DIR", str(tmp_path / "simulations"))
+    monkeypatch.setattr(SimulationRunner, "_run_states", {})
     agent._execute_tool = Mock(return_value="Observed simulated event.")
     return agent
 
@@ -67,3 +72,32 @@ def test_unusable_section_fails_report_after_bounded_retry(report_agent, content
     assert ReportManager.get_generated_sections(report.report_id) == []
     assert not report.markdown_content
     assert report_agent.llm._create_completion.call_count <= 7
+
+
+def test_report_uses_the_saved_roster_and_counts(report_agent, tmp_path):
+    run_dir = tmp_path / "simulations" / report_agent.simulation_id
+    run_dir.mkdir(parents=True)
+    (run_dir / "run_state.json").write_text(json.dumps({
+        "runner_status": "stopped",
+        "current_round": 120,
+        "total_rounds": 120,
+        "twitter_actions_count": 156,
+        "reddit_actions_count": 178,
+    }))
+    (run_dir / "simulation_config.json").write_text(json.dumps({
+        "agent_configs": [{"entity_name": "Provider", "entity_type": "Organization"}],
+    }))
+    report_agent.llm._create_completion.return_value = completion(
+        "Final Answer: Only the provider took part.\n<!-- end-of-section -->"
+    )
+
+    report = report_agent.generate_report(report_id="report_saved_run")
+
+    assert report.status == ReportStatus.COMPLETED
+    assert json.loads(report_agent.recorded_run_context) == {
+        "rounds_completed": 120,
+        "rounds_planned": 120,
+        "recorded_simulated_actions": 334,
+        "participant_count": 1,
+        "participants": [{"name": "Provider", "role": "Organization"}],
+    }

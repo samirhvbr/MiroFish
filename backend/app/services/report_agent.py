@@ -1199,8 +1199,12 @@ class ReportAgent:
         run = SimulationRunner.get_run_state(self.simulation_id)
         if run is None:
             return ""
-        config = SimulationManager().get_simulation_config(self.simulation_id) or {}
-        actors = config.get("agent_configs", [])
+        try:
+            config = SimulationManager().get_simulation_config(self.simulation_id) or {}
+        except (OSError, json.JSONDecodeError):
+            logger.warning("Could not read the saved agent roster for %s", self.simulation_id)
+            config = {}
+        actors = config.get("agent_configs")
         roster = [
             {"name": agent.get("entity_name"), "role": agent.get("entity_type")}
             for agent in actors[:100]
@@ -1209,7 +1213,7 @@ class ReportAgent:
         return json.dumps({
             "rounds_completed": run.current_round,
             "rounds_planned": run.total_rounds,
-            "recorded_simulated_actions": run.total_actions_count,
+            "recorded_simulated_actions": run.to_dict()["total_actions_count"],
             "participant_count": len(actors) if isinstance(actors, list) else None,
             "participants": roster,
         }, ensure_ascii=False)

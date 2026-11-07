@@ -600,6 +600,8 @@
     "customSimRounds": "Custom simulation rounds: {rounds} rounds"
   },
   "report": {
+    "sectionIncomplete": "Could not finish the section \"{title}\". Retry report generation for this simulation.",
+    "outlineEmpty": "The report outline contains no sections.",
     "taskStarted": "Report generation task started",
     "planningStart": "Starting report outline planning",
     "fetchSimContext": "Fetching simulation context",

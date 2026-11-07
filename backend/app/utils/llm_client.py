@@ -133,7 +133,9 @@ class LLMClient:
         messages: List[Dict[str, str]],
         temperature: float = 0.7,
         max_tokens: Optional[int] = 4096,
-        response_format: Optional[Dict] = None
+        response_format: Optional[Dict] = None,
+        *,
+        require_complete: bool = False,
     ) -> str:
         """
         发送聊天请求
@@ -153,8 +155,15 @@ class LLMClient:
             max_tokens=max_tokens,
             response_format=response_format,
         )
-        content = extract_chat_completion_text(response)
-        return _clean_chat_text(content)
+        content = _clean_chat_text(extract_chat_completion_text(response))
+        if require_complete:
+            choices = getattr(response, "choices", None) or []
+            reason = getattr(choices[0], "finish_reason", None) if choices else None
+            if reason == "length":
+                raise LLMResponseError("LLM output reached the token limit", finish_reason=reason)
+            if not content or content.startswith("<think>") or reason in {"content_filter", "tool_calls", "function_call"}:
+                raise LLMResponseError("LLM did not return usable text", finish_reason=reason)
+        return content
     
     def chat_json(
         self,

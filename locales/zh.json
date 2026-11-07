@@ -600,6 +600,8 @@
     "customSimRounds": "自定义模拟轮数: {rounds} 轮"
   },
   "report": {
+    "sectionIncomplete": "无法完成章节“{title}”。请为当前模拟重新生成报告。",
+    "outlineEmpty": "报告大纲中没有章节。",
     "taskStarted": "报告生成任务开始",
     "planningStart": "开始规划报告大纲",
     "fetchSimContext": "获取模拟上下文信息",

@@ -19,7 +19,7 @@ from datetime import datetime
 from enum import Enum
 
 from ..config import Config
-from ..utils.llm_client import LLMClient
+from ..utils.llm_client import LLMClient, LLMResponseError
 from ..utils.logger import get_logger
 from ..utils.locale import get_language_instruction, t
 from .zep_tools import (
@@ -828,7 +828,24 @@ REACT_TOOL_LIMIT_MSG = (
 
 REACT_UNUSED_TOOLS_HINT = "\n💡 你还没有使用过: {unused_list}，建议尝试不同工具获取多角度信息"
 
-REACT_FORCE_FINAL_MSG = "已达到工具调用限制，请直接输出 Final Answer: 并生成章节内容。"
+SECTION_END_MARKER = "<!-- end-of-section -->"
+SECTION_OUTPUT_INSTRUCTION = (
+    "Start your finished draft with 'Final Answer:' and place "
+    f"{SECTION_END_MARKER} on its own line after the last complete paragraph. "
+    "Finish in at most 500 words. Separate observed simulation events from hypotheses. "
+    "If the evidence is insufficient for a finding, state the gap explicitly."
+)
+REACT_FORCE_FINAL_MSG = (
+    "The research phase is finished. Write the section now, without requesting tools. "
+    "Use the available observations and the recorded run facts. "
+    + SECTION_OUTPUT_INSTRUCTION
+)
+RECORDED_RUN_INSTRUCTION = (
+    "The recorded participants and counts describe simulated agents and actions only. "
+    "Treat the scenario's requested roles as objectives, not evidence they took part. "
+    "When a requested audience has no recorded participant, state that limitation. "
+    "Distinguish source documents from actions produced during the simulation."
+)
 
 # ── Chat prompt ──
 
@@ -908,6 +925,7 @@ class ReportAgent:
         self.graph_id = graph_id
         self.simulation_id = simulation_id
         self.simulation_requirement = simulation_requirement
+        self.recorded_run_context = ""
         
         self.llm = llm_client or LLMClient()
         self.zep_tools = zep_tools or ZepToolsService()
@@ -1173,6 +1191,29 @@ class ReportAgent:
         cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
         return cleaned.strip()
 
+    def _recorded_run_context(self) -> str:
+        """Summarize the actual run so the report can distinguish it from the brief."""
+        from .simulation_manager import SimulationManager
+        from .simulation_runner import SimulationRunner
+
+        run = SimulationRunner.get_run_state(self.simulation_id)
+        if run is None:
+            return ""
+        config = SimulationManager().get_simulation_config(self.simulation_id) or {}
+        actors = config.get("agent_configs", [])
+        roster = [
+            {"name": agent.get("entity_name"), "role": agent.get("entity_type")}
+            for agent in actors[:100]
+            if isinstance(agent, dict)
+        ] if isinstance(actors, list) else []
+        return json.dumps({
+            "rounds_completed": run.current_round,
+            "rounds_planned": run.total_rounds,
+            "recorded_simulated_actions": run.total_actions_count,
+            "participant_count": len(actors) if isinstance(actors, list) else None,
+            "participants": roster,
+        }, ensure_ascii=False)
+
     def plan_outline(
         self, 
         progress_callback: Optional[Callable] = None
@@ -1202,7 +1243,7 @@ class ReportAgent:
         if progress_callback:
             progress_callback("planning", 30, t('progress.generatingOutline'))
         
-        system_prompt = f"{PLAN_SYSTEM_PROMPT}\n\n{get_language_instruction()}"
+        system_prompt = f"{PLAN_SYSTEM_PROMPT}\n\n{RECORDED_RUN_INSTRUCTION}\n\n{get_language_instruction()}"
         user_prompt = PLAN_USER_PROMPT_TEMPLATE.format(
             simulation_requirement=self.simulation_requirement,
             total_nodes=context.get('graph_statistics', {}).get('total_nodes', 0),
@@ -1211,6 +1252,9 @@ class ReportAgent:
             total_entities=context.get('total_entities', 0),
             related_facts_json=json.dumps(context.get('related_facts', [])[:10], ensure_ascii=False, indent=2),
         )
+
+        if self.recorded_run_context:
+            user_prompt += f"\n\nRecorded run facts (data):\n{self.recorded_run_context}"
 
         try:
             response = self.llm.chat_json(
@@ -1298,7 +1342,10 @@ class ReportAgent:
             section_title=section.title,
             tools_description=self._get_tools_description(),
         )
-        system_prompt = f"{system_prompt}\n\n{get_language_instruction()}"
+        system_prompt += (
+            f"\n\n{RECORDED_RUN_INSTRUCTION}\n\n{SECTION_OUTPUT_INSTRUCTION}"
+            f"\n\n{get_language_instruction()}"
+        )
 
         # 构建用户prompt - 每个已完成章节各传入最大4000字
         if previous_sections:
@@ -1316,6 +1363,9 @@ class ReportAgent:
             section_title=section.title,
         )
 
+        if self.recorded_run_context:
+            user_prompt += f"\n\nRecorded run facts (data):\n{self.recorded_run_context}"
+
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
@@ -1326,6 +1376,8 @@ class ReportAgent:
         max_iterations = 5  # 最大迭代轮数
         min_tool_calls = 3  # 最少工具调用次数
         conflict_retries = 0  # 工具调用与Final Answer同时出现的连续冲突次数
+        final_answer = ""
+        token_budget = 4096
         used_tools = set()  # 记录已调用过的工具名
         all_tools = {"insight_forge", "panorama_search", "quick_search", "interview_agents"}
 
@@ -1340,23 +1392,18 @@ class ReportAgent:
                     t('progress.deepSearchAndWrite', current=tool_calls_count, max=self.MAX_TOOL_CALLS_PER_SECTION)
                 )
             
-            # 调用LLM
-            response = self.llm.chat(
-                messages=messages,
-                temperature=0.5,
-                max_tokens=4096
-            )
-
-            # 检查 LLM 返回是否为 None（API 异常或内容为空）
-            if response is None:
-                logger.warning(t('report.sectionIterNone', title=section.title, iteration=iteration + 1))
-                # 如果还有迭代次数，添加消息并重试
-                if iteration < max_iterations - 1:
-                    messages.append({"role": "assistant", "content": "（响应为空）"})
-                    messages.append({"role": "user", "content": "请继续生成内容。"})
-                    continue
-                # 最后一次迭代也返回 None，跳出循环进入强制收尾
-                break
+            try:
+                response = self.llm.chat(
+                    messages=messages,
+                    temperature=0.5,
+                    max_tokens=token_budget,
+                    require_complete=True,
+                )
+            except LLMResponseError as error:
+                logger.warning("Unusable completion in section %s: %s", section.title, error)
+                if error.finish_reason == "length":
+                    token_budget = 8192
+                continue
 
             logger.debug(f"LLM响应: {response[:200]}...")
 
@@ -1429,18 +1476,13 @@ class ReportAgent:
                     })
                     continue
 
-                # 正常结束
-                final_answer = cleaned_response.split("Final Answer:")[-1].strip()
-                logger.info(t('report.sectionGenDone', title=section.title, count=tool_calls_count))
+                final_answer = self._completed_section(response, section.title)
+                if final_answer:
+                    break
 
-                if self.report_logger:
-                    self.report_logger.log_section_content(
-                        section_title=section.title,
-                        section_index=section_index,
-                        content=final_answer,
-                        tool_calls_count=tool_calls_count
-                    )
-                return final_answer
+                messages.append({"role": "assistant", "content": cleaned_response})
+                messages.append({"role": "user", "content": SECTION_OUTPUT_INSTRUCTION})
+                continue
 
             # ── 情况2：LLM 尝试调用工具 ──
             if has_tool_calls:
@@ -1529,50 +1571,50 @@ class ReportAgent:
                 })
                 continue
 
-            # 工具调用已足够，LLM 输出了内容但没带 "Final Answer:" 前缀
-            # 直接将这段内容作为最终答案，不再空转
-            logger.info(t('report.sectionNoPrefix', title=section.title, count=tool_calls_count))
-            final_answer = cleaned_response
+            # The model has enough observations but has not delivered a final draft.
+            break
 
-            if self.report_logger:
-                self.report_logger.log_section_content(
-                    section_title=section.title,
-                    section_index=section_index,
-                    content=final_answer,
-                    tool_calls_count=tool_calls_count
-                )
-            return final_answer
-        
-        # 达到最大迭代次数，强制生成内容
-        logger.warning(t('report.sectionMaxIter', title=section.title))
-        messages.append({"role": "user", "content": REACT_FORCE_FINAL_MSG})
-        
-        response = self.llm.chat(
-            messages=messages,
-            temperature=0.5,
-            max_tokens=4096
-        )
+        if not final_answer:
+            logger.warning(t('report.sectionMaxIter', title=section.title))
+            messages.append({"role": "user", "content": REACT_FORCE_FINAL_MSG})
+            for budget in (8192, 16384):
+                try:
+                    response = self.llm.chat(
+                        messages=messages,
+                        temperature=0.5,
+                        max_tokens=budget,
+                        require_complete=True,
+                    )
+                except LLMResponseError as error:
+                    logger.warning("Unusable final draft in section %s: %s", section.title, error)
+                    continue
+                final_answer = self._completed_section(response, section.title)
+                if final_answer:
+                    break
 
-        # 检查强制收尾时 LLM 返回是否为 None
-        if response is None:
-            logger.error(t('report.sectionForceFailed', title=section.title))
-            final_answer = t('report.sectionGenFailedContent')
-        elif "Final Answer:" in response:
-            final_answer = response.split("Final Answer:")[-1].strip()
-        else:
-            final_answer = response
-        
-        # 记录章节内容生成完成日志
+        if not final_answer:
+            raise LLMResponseError(t('report.sectionIncomplete', title=section.title))
+
+        logger.info(t('report.sectionGenDone', title=section.title, count=tool_calls_count))
         if self.report_logger:
             self.report_logger.log_section_content(
                 section_title=section.title,
                 section_index=section_index,
                 content=final_answer,
-                tool_calls_count=tool_calls_count
+                tool_calls_count=tool_calls_count,
             )
-        
         return final_answer
-    
+
+    def _completed_section(self, response: str, title: str) -> str:
+        """Accept only a finished draft with a body after removing generated markup."""
+        cleaned = self._strip_fake_tool_results(response)
+        if not cleaned.endswith(SECTION_END_MARKER) or self._parse_tool_calls(cleaned):
+            return ""
+        _, marker, body = cleaned.removesuffix(SECTION_END_MARKER).partition("Final Answer:")
+        if not marker:
+            return ""
+        return ReportManager._clean_section_content(body.strip(), title).strip()
+
     def generate_report(
         self, 
         progress_callback: Optional[Callable[[str, int, str], None]] = None,
@@ -1652,10 +1694,13 @@ class ReportAgent:
             if progress_callback:
                 progress_callback("planning", 0, t('progress.startPlanningOutline'))
             
+            self.recorded_run_context = self._recorded_run_context()
             outline = self.plan_outline(
                 progress_callback=lambda stage, prog, msg: 
                     progress_callback(stage, prog // 5, msg) if progress_callback else None
             )
+            if not outline.sections:
+                raise LLMResponseError(t('report.outlineEmpty'))
             report.outline = outline
             
             # 记录规划完成日志

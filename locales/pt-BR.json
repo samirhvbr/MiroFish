@@ -600,6 +600,8 @@
     "loadedExistingSim": "Simulação existente carregada com {actions} ações salvas."
   },
   "report": {
+    "sectionIncomplete": "Não foi possível concluir a seção \"{title}\". Tente gerar o relatório novamente nesta simulação.",
+    "outlineEmpty": "O esboço do relatório não contém seções.",
     "taskStarted": "Tarefa de geração do relatório iniciada",
     "planningStart": "Iniciando o planejamento do relatório",
     "fetchSimContext": "Obtendo o contexto da simulação",

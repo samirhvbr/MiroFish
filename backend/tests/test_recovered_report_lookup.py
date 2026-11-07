@@ -2,7 +2,10 @@ import json
 
 import pytest
 
+from app import create_app
 from app.services.report_agent import Report, ReportManager, ReportStatus
+from app.services.simulation_manager import SimulationManager
+from app.services.simulation_runner import SimulationRunner
 
 
 @pytest.fixture(autouse=True)
@@ -62,3 +65,36 @@ def test_without_success_returns_most_recent_attempt(monkeypatch):
     )
 
     assert ReportManager.get_report_by_simulation("sim_example").report_id == pending.report_id
+
+
+
+def test_partial_metadata_during_regeneration_does_not_hide_last_success(reports_dir, monkeypatch):
+    complete = save_report("report_complete", "2026-10-01T12:00:00", ReportStatus.COMPLETED)
+    partial = reports_dir / "report_writing"
+    partial.mkdir()
+    (partial / "meta.json").write_text('{"report_id":', encoding="utf-8")
+    monkeypatch.setattr(
+        "app.services.report_agent.os.listdir", lambda _: [partial.name, complete.report_id]
+    )
+
+    assert ReportManager.get_report_by_simulation("sim_example").report_id == complete.report_id
+
+
+
+def test_history_and_report_check_use_the_same_successful_revision(tmp_path, monkeypatch):
+    simulations = tmp_path / "simulations"
+    monkeypatch.setattr(SimulationManager, "SIMULATION_DATA_DIR", str(simulations))
+    monkeypatch.setattr(SimulationRunner, "RUN_STATE_DIR", str(simulations))
+    state = SimulationManager().create_simulation("proj_example", "graph_example")
+    sid = state.simulation_id
+    save_report("report_original", "2026-10-01T12:00:00", ReportStatus.COMPLETED, sid)
+    recovered = save_report("report_recovered", "2026-10-01T12:05:00", ReportStatus.COMPLETED, sid)
+    save_report("report_retry", "2026-10-01T12:10:00", ReportStatus.FAILED, sid)
+    app = create_app()
+    app.config["TESTING"] = True
+    client = app.test_client()
+
+    history = client.get("/api/simulation/history").json["data"]
+    check = client.get(f"/api/report/check/{sid}").json["data"]
+
+    assert history[0]["report_id"] == check["report_id"] == recovered.report_id

@@ -2620,7 +2620,11 @@ class ReportManager:
             else:
                 continue
 
-            report = cls.get_report(report_id)
+            try:
+                report = cls.get_report(report_id)
+            except (FileNotFoundError, json.JSONDecodeError):
+                # A concurrent writer or deletion must not hide older reports.
+                continue
             if not report or report.simulation_id != simulation_id:
                 continue
 

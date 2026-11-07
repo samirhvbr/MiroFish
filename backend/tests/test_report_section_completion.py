@@ -87,9 +87,14 @@ def test_report_uses_the_saved_roster_and_counts(report_agent, tmp_path):
     (run_dir / "simulation_config.json").write_text(json.dumps({
         "agent_configs": [{"entity_name": "Provider", "entity_type": "Organization"}],
     }))
-    report_agent.llm._create_completion.return_value = completion(
-        "Final Answer: Only the provider took part.\n<!-- end-of-section -->"
-    )
+    report_agent.llm._create_completion.side_effect = [
+        completion("Need an observation."),
+        completion("Need an observation."),
+        completion("Need an observation."),
+        completion("Need an observation."),
+        completion("Need an observation."),
+        completion('{"content":"Only the provider took part."}'),
+    ]
 
     report = report_agent.generate_report(report_id="report_saved_run")
 
@@ -101,3 +106,20 @@ def test_report_uses_the_saved_roster_and_counts(report_agent, tmp_path):
         "participant_count": 1,
         "participants": [{"name": "Provider", "role": "Organization"}],
     }
+
+
+def test_writer_uses_saved_observations_even_when_research_never_finishes(report_agent):
+    tool = '<tool_call>{"name":"quick_search","parameters":{"query":"scenario"}}</tool_call>'
+    report_agent.llm._create_completion.side_effect = [
+        *[completion(tool) for _ in range(5)],
+        completion('{"content":"The observed event', "length"),
+        completion('{"content":"The observed event was recorded."}'),
+    ]
+
+    report = report_agent.generate_report(report_id="report_observations")
+
+    assert report.status == ReportStatus.COMPLETED
+    assert "The observed event was recorded." in report.markdown_content
+    final_request = report_agent.llm._create_completion.call_args.kwargs
+    assert "Observed simulated event." in final_request["messages"][1]["content"]
+    assert final_request["max_tokens"] is None
